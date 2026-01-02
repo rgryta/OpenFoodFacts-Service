@@ -1,0 +1,8 @@
+# OpenFoodFacts Updater Cron Schedule
+# Runs inside the updater container
+
+# Daily delta update at 2:00 AM UTC
+0 2 * * * python3 /app/scripts/delta_update.py >> /var/log/cron.log 2>&1
+
+# Weekly cleanup on Sunday at 3:00 AM UTC
+0 3 * * 0 python3 /app/scripts/weekly_cleanup.py >> /var/log/cron.log 2>&1

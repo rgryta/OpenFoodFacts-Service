@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  off-db:
+    image: postgres:16-alpine
+    container_name: openfoodfacts-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: openfoodfacts
+      POSTGRES_USER: offuser
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./db/extensions.sql:/docker-entrypoint-initdb.d/00-extensions.sql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - off-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U offuser -d openfoodfacts"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - off-network
+
+  off-api:
+    image: ghcr.io/rgryta/openfoodfacts-api:${IMAGE_TAG:-latest}
+    container_name: openfoodfacts-api
+    restart: unless-stopped
+    ports:
+      - "8090:8000"
+    environment:
+      DATABASE_URL: postgresql://offuser:${POSTGRES_PASSWORD}@off-db:5432/openfoodfacts
+      API_KEYS: ${API_KEYS}
+      LOG_LEVEL: INFO
+    depends_on:
+      off-db:
+        condition: service_healthy
+    networks:
+      - off-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  off-updater:
+    image: ghcr.io/rgryta/openfoodfacts-updater:${IMAGE_TAG:-latest}
+    container_name: openfoodfacts-updater
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://offuser:${POSTGRES_PASSWORD}@off-db:5432/openfoodfacts
+      OFF_DELTA_URL: https://static.openfoodfacts.org/data/delta
+      OFF_PARQUET_URL: https://huggingface.co/datasets/openfoodfacts/product-database/resolve/main/food.parquet
+      LOG_LEVEL: INFO
+    depends_on:
+      off-db:
+        condition: service_healthy
+    volumes:
+      - off-data-cache:/app/data
+    networks:
+      - off-network
+
+networks:
+  off-network:
+    driver: bridge
+
+volumes:
+  off-db-data:
+    driver: local
+  off-data-cache:
+    driver: local
