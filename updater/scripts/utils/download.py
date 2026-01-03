@@ -27,7 +27,7 @@ async def download_file(url: str, destination: Path, timeout: int = 3600) -> boo
         destination.parent.mkdir(parents=True, exist_ok=True)
 
         # Stream download to handle large files
-        async with httpx.AsyncClient(timeout=timeout) as client:
+        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
             async with client.stream("GET", url) as response:
                 response.raise_for_status()
 

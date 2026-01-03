@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://offuser:password@off-db:5432/openfoodfacts")
 DELTA_URL = os.getenv("OFF_DELTA_URL", "https://static.openfoodfacts.org/data/delta")
 DATA_DIR = Path("/app/data")
-BATCH_SIZE = 5000
+BATCH_SIZE = 1000
 APPLIED_DELTAS_FILE = DATA_DIR / ".applied_deltas.txt"
 
 

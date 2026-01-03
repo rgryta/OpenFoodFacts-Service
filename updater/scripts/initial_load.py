@@ -31,7 +31,7 @@ PARQUET_URL = os.getenv(
     "https://huggingface.co/datasets/openfoodfacts/product-database/resolve/main/food.parquet"
 )
 DATA_DIR = Path("/app/data")
-BATCH_SIZE = 10000
+BATCH_SIZE = 1000
 
 
 async def main():
@@ -50,21 +50,18 @@ async def main():
         logger.error("Failed to download Parquet file")
         sys.exit(1)
 
-    # Step 2: Load Parquet with DuckDB (efficient for large files)
+    # Step 2: Load Parquet with DuckDB
     logger.info("Loading Parquet file with DuckDB...")
 
     try:
         # Connect to DuckDB (in-memory)
         duck_conn = duckdb.connect()
 
-        # Query product count
-        total_count = duck_conn.execute(
-            f"SELECT COUNT(*) FROM '{parquet_file}'"
-        ).fetchone()[0]
-
+        # Query total row count
+        total_count = duck_conn.execute(f"SELECT COUNT(*) FROM '{parquet_file}'").fetchone()[0]
         logger.info(f"Total products in Parquet: {total_count:,}")
 
-        # Step 3: Process in batches and insert to PostgreSQL
+        # Step 3: Connect to PostgreSQL
         logger.info("Connecting to PostgreSQL...")
         pg_conn = await create_connection(DATABASE_URL)
 
@@ -73,29 +70,31 @@ async def main():
         total_processed = 0
         batch = []
 
-        # Stream rows from Parquet
-        for row in duck_conn.execute(f"SELECT * FROM '{parquet_file}'").fetchdf().itertuples(index=False):
-            # Convert row to dict
-            product_data = row._asdict()
+        # Stream rows in chunks to save memory
+        query = f"SELECT * FROM '{parquet_file}'"
+        res = duck_conn.execute(query)
 
-            # Extract fields
-            product = extract_product_fields(product_data)
+        batch_size = BATCH_SIZE
+        offset = 0
 
-            if product:
-                batch.append(product)
+        while True:
+            batch_df = res.fetch_df_chunk(batch_size)
+            if batch_df.empty:
+                break
 
-                # Upsert when batch is full
-                if len(batch) >= BATCH_SIZE:
-                    await upsert_products_batch(pg_conn, batch)
-                    total_processed += len(batch)
-                    logger.info(f"Progress: {total_processed:,}/{total_count:,} ({(total_processed/total_count)*100:.1f}%)")
-                    batch = []
+            batch = []
+            for row in batch_df.itertuples(index=False):
+                product_data = row._asdict()
+                product = extract_product_fields(product_data)
+                if product:
+                    batch.append(product)
 
-        # Insert remaining products
-        if batch:
-            await upsert_products_batch(pg_conn, batch)
-            total_processed += len(batch)
-            logger.info(f"Progress: {total_processed:,}/{total_count:,} (100.0%)")
+            if batch:
+                logger.info(f"Upserting batch of {len(batch)} products. Sample: {batch[:3]}")
+                await upsert_products_batch(pg_conn, batch)
+                total_processed += len(batch)
+                logger.info(f"Progress: {total_processed:,}/{total_count:,} ({(total_processed/total_count)*100:.1f}%)")
+
 
         # Close connections
         await pg_conn.close()
@@ -103,7 +102,7 @@ async def main():
 
         logger.info(f"Bootstrap complete! Loaded {total_processed:,} products")
 
-        # Cleanup Parquet file to save space
+        # Cleanup Parquet file
         logger.info("Cleaning up Parquet file...")
         parquet_file.unlink()
 
