@@ -50,6 +50,7 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://offuser:${POSTGRES_PASSWORD}@off-db:5432/openfoodfacts
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       OFF_DELTA_URL: https://static.openfoodfacts.org/data/delta
       OFF_JSONL_URL: https://static.openfoodfacts.org/data/openfoodfacts-products.jsonl.gz
       LOG_LEVEL: INFO

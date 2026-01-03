@@ -41,14 +41,18 @@ async def main():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     jsonl_file = DATA_DIR / "openfoodfacts-products.jsonl.gz"
 
-    # Step 1: Download JSONL file
-    logger.info(f"Downloading JSONL file from {JSONL_URL}")
-    logger.info("This will download ~7 GB (compressed), please be patient...")
-    success = await download_file(JSONL_URL, jsonl_file, timeout=7200)  # 2 hour timeout
+    # Step 1: Download JSONL file (only if not already present)
+    if jsonl_file.exists():
+        logger.info(f"JSONL file already exists at {jsonl_file}")
+        logger.info("Skipping download. Delete the file to force re-download.")
+    else:
+        logger.info(f"Downloading JSONL file from {JSONL_URL}")
+        logger.info("This will download ~7 GB (compressed), please be patient...")
+        success = await download_file(JSONL_URL, jsonl_file, timeout=7200)  # 2 hour timeout
 
-    if not success:
-        logger.error("Failed to download JSONL file")
-        sys.exit(1)
+        if not success:
+            logger.error("Failed to download JSONL file")
+            sys.exit(1)
 
     # Step 2: Process JSONL and insert to PostgreSQL
     try:
@@ -83,9 +87,9 @@ async def main():
 
         logger.info(f"Bootstrap complete! Loaded {total_processed:,} products")
 
-        # Cleanup JSONL file to save space
-        logger.info("Cleaning up JSONL file...")
-        jsonl_file.unlink()
+        # Keep JSONL file for future use (testing/debugging)
+        logger.info(f"JSONL file kept at {jsonl_file} for future use")
+        logger.info("To free up space, manually delete the file")
 
         # Create bootstrap completion marker
         bootstrap_marker = DATA_DIR / ".bootstrap_complete"

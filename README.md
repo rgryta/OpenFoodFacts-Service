@@ -27,25 +27,19 @@ A self-hosted product search service for [OpenFoodFacts](https://world.openfoodf
    nano .env  # Set POSTGRES_PASSWORD and API_KEYS
    ```
 
-3. **Start services**:
-   ```bash
-   docker-compose up -d off-db
-   # Wait 10 seconds for DB to initialize
-   ```
-
-4. **Bootstrap database** (first time only, takes 2-4 hours):
-   ```bash
-   docker-compose run --rm off-updater python /app/scripts/initial_load.py
-   ```
-
-   **Note**: The updater cron jobs will automatically skip until bootstrap completes. A marker file (`.bootstrap_complete`) is created to signal completion.
-
-5. **Start all services**:
+3. **Start all services**:
    ```bash
    docker-compose up -d
    ```
 
-6. **Verify health**:
+   **What happens on first start:**
+   - Database initializes with schema
+   - Updater checks if database is empty
+   - If empty: automatically downloads 7GB JSONL and bootstraps (1-2 hours)
+   - If populated: skips initialization and starts cron scheduler
+   - JSONL file is kept in volume for future re-use (no re-download needed)
+
+4. **Verify health**:
    ```bash
    curl -H "X-API-Key: your_api_key_here" http://localhost:8090/health
    ```
@@ -72,12 +66,12 @@ A self-hosted product search service for [OpenFoodFacts](https://world.openfoodf
    - `API_KEYS`: Comma-separated API keys
    - `IMAGE_TAG`: `latest` or specific version like `v1.0.0`
 
-5. **Start stack and bootstrap**:
+5. **Start stack**:
    - Start all services in Dockge
-   - Exec into `openfoodfacts-updater` container
-   - Run: `python /app/scripts/initial_load.py`
-   - Wait 2-4 hours for completion
-   - Cron jobs will skip automatically until bootstrap finishes
+   - Updater automatically checks database and initializes if needed
+   - Monitor logs: `docker logs -f openfoodfacts-updater`
+   - First run: bootstraps automatically (1-2 hours)
+   - Subsequent runs: skips initialization, starts cron scheduler
 
 6. **Verify deployment**:
    ```bash
@@ -275,6 +269,23 @@ docker-compose logs -f off-updater
 
 ```bash
 docker exec openfoodfacts-updater python /app/scripts/delta_update.py
+```
+
+### Force Re-initialization
+
+To force a complete re-bootstrap (useful for testing):
+```bash
+# Stop services
+docker-compose down
+
+# Clear database
+docker volume rm openfoodfacts-service_off-db-data
+
+# Optionally clear cached JSONL to force re-download
+docker volume rm openfoodfacts-service_off-data-cache
+
+# Start again (will auto-initialize)
+docker-compose up -d
 ```
 
 ### Database Backup
