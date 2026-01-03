@@ -51,7 +51,7 @@ services:
     environment:
       DATABASE_URL: postgresql://offuser:${POSTGRES_PASSWORD}@off-db:5432/openfoodfacts
       OFF_DELTA_URL: https://static.openfoodfacts.org/data/delta
-      OFF_PARQUET_URL: https://huggingface.co/datasets/openfoodfacts/product-database/resolve/main/food.parquet
+      OFF_JSONL_URL: https://static.openfoodfacts.org/data/openfoodfacts-products.jsonl.gz
       LOG_LEVEL: INFO
     depends_on:
       off-db:

@@ -218,7 +218,7 @@ POST /api/v1/admin/sync/trigger
 
 ### Data Flow
 
-1. **Initial Bootstrap**: Downloads 4.43GB Parquet from Hugging Face → PostgreSQL (2-4 hours)
+1. **Initial Bootstrap**: Downloads 7GB JSONL from OpenFoodFacts → PostgreSQL (1-2 hours)
 2. **Daily Updates**:
    - Checks for new delta files (14-day rolling window)
    - Applies only unapplied deltas in chronological order
