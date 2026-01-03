@@ -63,6 +63,7 @@ def extract_product_fields(product_data: Dict[str, Any]) -> Dict[str, Any]:
         "product_name_en": product_data.get("product_name_en"),
         "brands": product_data.get("brands"),
         "quantity": product_data.get("quantity"),
+        "countries_tags": product_data.get("countries_tags", []),
         "energy_100g": nutriments.get("energy_100g"),
         "energy_kcal_100g": nutriments.get("energy-kcal_100g"),
         "proteins_100g": nutriments.get("proteins_100g"),
@@ -73,7 +74,7 @@ def extract_product_fields(product_data: Dict[str, Any]) -> Dict[str, Any]:
         "sodium_100g": nutriments.get("sodium_100g"),
         "image_url": image_url,
         "image_small_url": image_small_url,
-        "data": product_data  # Store full JSON for future extensibility
+        "data": product_data  # Store full JSON including ALL language variants
     }
 
 

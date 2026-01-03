@@ -81,37 +81,74 @@ async def search_by_barcode(code: str, api_key: str = Security(api_key_header)):
 async def search_by_name(
     q: str = Query(..., min_length=3, description="Search query (minimum 3 characters)"),
     limit: int = Query(20, ge=1, le=100, description="Maximum number of results"),
+    lang: str = Query(None, description="Optional language preference (e.g., 'en', 'fr', 'de', 'es')"),
+    country: str = Query(None, description="Optional country filter (e.g., 'en:france', 'en:united-states')"),
     api_key: str = Security(api_key_header)
 ):
     """
-    Search for products by name or brand using fuzzy text search.
+    Search for products by name or brand using fuzzy text search with optional language preference.
     Requires API key authentication.
     Uses PostgreSQL trigram similarity for typo-tolerant matching.
+
+    If `lang` is specified, product names in that language are prioritized (e.g., 'fr' for French).
+    The JSONB data column contains ALL language variants, so any language is supported.
+    If `country` is specified, only products sold in that country are returned.
     """
     # Validate API key
     await verify_api_key(api_key)
 
+    # Languages with trigram indexes for fast fuzzy search
+    INDEXED_LANGUAGES = {'en', 'fr', 'de', 'es', 'it', 'pt', 'pl', 'nl', 'ja', 'zh', 'ar', 'ru'}
+
     try:
         pool = await get_pool()
         async with pool.acquire() as conn:
-            rows = await conn.fetch(
+            # Build dynamic query based on language preference
+            if lang and lang.lower() in INDEXED_LANGUAGES:
+                # Use JSONB with indexed language for fast search
+                lang_field = f"product_name_{lang.lower()}"
+                query = """
+                    SELECT code, product_name, brands, image_url,
+                           data->>$2 as localized_name,
+                           GREATEST(
+                               COALESCE(similarity(data->>$2, $1), 0) * 2.0,  -- Boost localized name heavily
+                               similarity(product_name, $1),
+                               similarity(product_name_en, $1),
+                               similarity(brands, $1)
+                           ) as relevance_score
+                    FROM products
+                    WHERE (data->>$2) % $1
+                       OR product_name % $1
+                       OR product_name_en % $1
+                       OR brands % $1
                 """
-                SELECT code, product_name, brands, image_url,
-                       GREATEST(
-                           similarity(product_name, $1),
-                           similarity(product_name_en, $1),
-                           similarity(brands, $1)
-                       ) as relevance_score
-                FROM products
-                WHERE product_name % $1
-                   OR product_name_en % $1
-                   OR brands % $1
-                ORDER BY relevance_score DESC
-                LIMIT $2
-                """,
-                q,
-                limit
-            )
+                params = [q, lang_field]
+            else:
+                # No language preference or unsupported language, use default search
+                query = """
+                    SELECT code, product_name, brands, image_url,
+                           GREATEST(
+                               similarity(product_name, $1),
+                               similarity(product_name_en, $1),
+                               similarity(brands, $1)
+                           ) as relevance_score
+                    FROM products
+                    WHERE product_name % $1
+                       OR product_name_en % $1
+                       OR brands % $1
+                """
+                params = [q]
+
+            # Add country filter if specified
+            if country:
+                params.append(country.lower())
+                query += f" AND ${len(params)} = ANY(countries_tags)"
+
+            # Add ordering and limit
+            params.append(limit)
+            query += f" ORDER BY relevance_score DESC LIMIT ${len(params)}"
+
+            rows = await conn.fetch(query, *params)
 
             results = [
                 ProductSearchResult(

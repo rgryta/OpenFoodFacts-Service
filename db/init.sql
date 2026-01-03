@@ -14,6 +14,7 @@ CREATE TABLE products (
     product_name_en TEXT,
     brands TEXT,
     quantity TEXT,
+    countries_tags TEXT[],  -- Array of country tags for localization
 
     -- Nutritional data per 100g (extracted for fast access)
     energy_100g NUMERIC(10, 2),
@@ -44,8 +45,25 @@ CREATE INDEX idx_product_name_trgm ON products USING GIN (product_name gin_trgm_
 CREATE INDEX idx_product_name_en_trgm ON products USING GIN (product_name_en gin_trgm_ops);
 CREATE INDEX idx_brands_trgm ON products USING GIN (brands gin_trgm_ops);
 
--- GIN index for JSONB queries (future extensibility)
-CREATE INDEX idx_data_gin ON products USING GIN (data);
+-- GIN index for country tags array (for country-based filtering)
+CREATE INDEX idx_countries_tags ON products USING GIN (countries_tags);
+
+-- GIN index for JSONB queries (enables exact lookups)
+CREATE INDEX idx_data_gin ON products USING GIN (data jsonb_path_ops);
+
+-- Functional trigram indexes for common localized product names (extracted from JSONB)
+-- These enable fast fuzzy search on language-specific fields
+CREATE INDEX idx_data_product_name_fr_trgm ON products USING GIN ((data->>'product_name_fr') gin_trgm_ops);
+CREATE INDEX idx_data_product_name_de_trgm ON products USING GIN ((data->>'product_name_de') gin_trgm_ops);
+CREATE INDEX idx_data_product_name_es_trgm ON products USING GIN ((data->>'product_name_es') gin_trgm_ops);
+CREATE INDEX idx_data_product_name_it_trgm ON products USING GIN ((data->>'product_name_it') gin_trgm_ops);
+CREATE INDEX idx_data_product_name_pt_trgm ON products USING GIN ((data->>'product_name_pt') gin_trgm_ops);
+CREATE INDEX idx_data_product_name_pl_trgm ON products USING GIN ((data->>'product_name_pl') gin_trgm_ops);
+CREATE INDEX idx_data_product_name_nl_trgm ON products USING GIN ((data->>'product_name_nl') gin_trgm_ops);
+CREATE INDEX idx_data_product_name_ja_trgm ON products USING GIN ((data->>'product_name_ja') gin_trgm_ops);
+CREATE INDEX idx_data_product_name_zh_trgm ON products USING GIN ((data->>'product_name_zh') gin_trgm_ops);
+CREATE INDEX idx_data_product_name_ar_trgm ON products USING GIN ((data->>'product_name_ar') gin_trgm_ops);
+CREATE INDEX idx_data_product_name_ru_trgm ON products USING GIN ((data->>'product_name_ru') gin_trgm_ops);
 
 -- Trigger function to automatically update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
