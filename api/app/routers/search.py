@@ -2,25 +2,28 @@
 Product search endpoints
 """
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Security
 from typing import List
 import asyncpg
 
 from ..models import ProductResponse, SearchResponse, ProductSearchResult, NutrientsModel, ProductImagesModel
 from ..database import get_pool
-from ..middleware.auth import api_key_dependency
+from ..middleware.auth import api_key_dependency, api_key_header, verify_api_key
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/products", tags=["Products"])
 
 
-@router.get("/barcode/{code}", response_model=ProductResponse, dependencies=[Depends(api_key_dependency)])
-async def search_by_barcode(code: str):
+@router.get("/barcode/{code}", response_model=ProductResponse)
+async def search_by_barcode(code: str, api_key: str = Security(api_key_header)):
     """
     Search for a product by exact barcode/code match.
     Requires API key authentication.
     """
+    # Validate API key
+    await verify_api_key(api_key)
+
     try:
         pool = await get_pool()
         async with pool.acquire() as conn:
@@ -74,16 +77,20 @@ async def search_by_barcode(code: str):
         )
 
 
-@router.get("/search", response_model=SearchResponse, dependencies=[Depends(api_key_dependency)])
+@router.get("/search", response_model=SearchResponse)
 async def search_by_name(
     q: str = Query(..., min_length=3, description="Search query (minimum 3 characters)"),
-    limit: int = Query(20, ge=1, le=100, description="Maximum number of results")
+    limit: int = Query(20, ge=1, le=100, description="Maximum number of results"),
+    api_key: str = Security(api_key_header)
 ):
     """
     Search for products by name or brand using fuzzy text search.
     Requires API key authentication.
     Uses PostgreSQL trigram similarity for typo-tolerant matching.
     """
+    # Validate API key
+    await verify_api_key(api_key)
+
     try:
         pool = await get_pool()
         async with pool.acquire() as conn:

@@ -46,7 +46,10 @@ app = FastAPI(
     title=settings.service_name,
     description="Self-hosted OpenFoodFacts product search service with PostgreSQL backend",
     version=settings.version,
-    lifespan=lifespan
+    lifespan=lifespan,
+    swagger_ui_parameters={
+        "persistAuthorization": True
+    }
 )
 
 # CORS middleware (adjust origins as needed for production)

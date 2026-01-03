@@ -2,18 +2,18 @@
 Admin endpoints for service management
 """
 import logging
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Security
 
 from ..models import SyncTriggerResponse
-from ..middleware.auth import api_key_dependency
+from ..middleware.auth import api_key_dependency, api_key_header, verify_api_key
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/admin", tags=["Admin"])
 
 
-@router.post("/sync/trigger", response_model=SyncTriggerResponse, dependencies=[Depends(api_key_dependency)])
-async def trigger_manual_sync():
+@router.post("/sync/trigger", response_model=SyncTriggerResponse)
+async def trigger_manual_sync(api_key: str = Security(api_key_header)):
     """
     Trigger a manual delta sync.
     Requires API key authentication.
@@ -22,6 +22,9 @@ async def trigger_manual_sync():
     Actual sync is handled by the updater container with cron.
     Future enhancement: Implement IPC to trigger updater script.
     """
+    # Validate API key
+    await verify_api_key(api_key)
+
     logger.info("Manual sync trigger requested")
 
     # TODO: Implement actual sync trigger mechanism
