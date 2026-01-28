@@ -18,7 +18,9 @@ def _sanitize_text(value: str | None) -> str | None:
 
 def _sanitize_json(data: dict) -> str:
     """Serialize dict to JSON, removing null bytes."""
-    return json.dumps(data).replace("\x00", "")
+    json_str = json.dumps(data)
+    # Remove both literal null bytes and JSON-escaped null bytes (\u0000)
+    return json_str.replace("\x00", "").replace("\\u0000", "")
 
 
 async def create_connection(database_url: str) -> asyncpg.Connection:
