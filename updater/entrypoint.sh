@@ -11,15 +11,22 @@ until pg_isready -h off-db -p 5432 -U offuser; do
 done
 echo "Database is ready!"
 
-# Check if database has products
-echo "Checking if database needs initialization..."
-PRODUCT_COUNT=$(PGPASSWORD="${POSTGRES_PASSWORD:-password}" psql -h off-db -U offuser -d openfoodfacts -t -c "SELECT COUNT(*) FROM products;" 2>/dev/null || echo "0")
-PRODUCT_COUNT=$(echo $PRODUCT_COUNT | xargs)  # Trim whitespace
+# Check if bootstrap is complete (marker file exists)
+BOOTSTRAP_MARKER="/app/data/.bootstrap_complete"
 
-echo "Current product count: $PRODUCT_COUNT"
+if [ -f "$BOOTSTRAP_MARKER" ]; then
+    PRODUCT_COUNT=$(PGPASSWORD="${POSTGRES_PASSWORD:-password}" psql -h off-db -U offuser -d openfoodfacts -t -c "SELECT COUNT(*) FROM products;" 2>/dev/null || echo "0")
+    PRODUCT_COUNT=$(echo $PRODUCT_COUNT | xargs)
+    echo "Bootstrap already complete. Database contains $PRODUCT_COUNT products."
+else
+    echo "Bootstrap marker not found. Running initialization..."
+    PRODUCT_COUNT=$(PGPASSWORD="${POSTGRES_PASSWORD:-password}" psql -h off-db -U offuser -d openfoodfacts -t -c "SELECT COUNT(*) FROM products;" 2>/dev/null || echo "0")
+    PRODUCT_COUNT=$(echo $PRODUCT_COUNT | xargs)
 
-if [ "$PRODUCT_COUNT" -eq "0" ]; then
-    echo "Database is empty. Starting initialization..."
+    if [ "$PRODUCT_COUNT" -gt "0" ]; then
+        echo "Found $PRODUCT_COUNT existing products. Bootstrap will resume/update."
+    fi
+
     python3 /app/scripts/initial_load.py
 
     if [ $? -eq 0 ]; then
@@ -28,11 +35,6 @@ if [ "$PRODUCT_COUNT" -eq "0" ]; then
         echo "Initialization failed!"
         exit 1
     fi
-else
-    echo "Database already contains $PRODUCT_COUNT products. Skipping initialization."
-
-    # Ensure bootstrap marker exists
-    touch /app/data/.bootstrap_complete
 fi
 
 # Start cron in foreground
