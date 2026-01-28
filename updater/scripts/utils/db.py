@@ -9,6 +9,18 @@ from typing import List, Dict, Any
 logger = logging.getLogger(__name__)
 
 
+def _sanitize_text(value: str | None) -> str | None:
+    """Remove null bytes from text that PostgreSQL cannot store."""
+    if value is None:
+        return None
+    return value.replace("\x00", "")
+
+
+def _sanitize_json(data: dict) -> str:
+    """Serialize dict to JSON, removing null bytes."""
+    return json.dumps(data).replace("\x00", "")
+
+
 async def create_connection(database_url: str) -> asyncpg.Connection:
     """
     Create a database connection.
@@ -43,14 +55,14 @@ async def upsert_products_batch(conn: asyncpg.Connection, products: List[Dict[st
         return 0
 
     try:
-        # Prepare data for batch insert
+        # Prepare data for batch insert (sanitize text fields to remove null bytes)
         values = [
             (
-                p["code"],
-                p.get("product_name"),
-                p.get("product_name_en"),
-                p.get("brands"),
-                p.get("quantity"),
+                _sanitize_text(p["code"]),
+                _sanitize_text(p.get("product_name")),
+                _sanitize_text(p.get("product_name_en")),
+                _sanitize_text(p.get("brands")),
+                _sanitize_text(p.get("quantity")),
                 p.get("energy_100g"),
                 p.get("energy_kcal_100g"),
                 p.get("proteins_100g"),
@@ -59,9 +71,9 @@ async def upsert_products_batch(conn: asyncpg.Connection, products: List[Dict[st
                 p.get("sugars_100g"),
                 p.get("fiber_100g"),
                 p.get("sodium_100g"),
-                p.get("image_url"),
-                p.get("image_small_url"),
-                json.dumps(p.get("data", {}))  # Convert dict to JSON string
+                _sanitize_text(p.get("image_url")),
+                _sanitize_text(p.get("image_small_url")),
+                _sanitize_json(p.get("data", {}))  # Convert dict to JSON string
             )
             for p in products
         ]
