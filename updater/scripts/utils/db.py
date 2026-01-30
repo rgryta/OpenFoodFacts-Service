@@ -42,19 +42,31 @@ async def create_connection(database_url: str) -> asyncpg.Connection:
         raise
 
 
-async def upsert_products_batch(conn: asyncpg.Connection, products: List[Dict[str, Any]]) -> int:
+async def upsert_products_batch(
+    conn: asyncpg.Connection,
+    products: List[Dict[str, Any]],
+    existing_codes: set = None
+) -> int:
     """
     Insert or update a batch of products using UPSERT.
+    Skips products that already exist if existing_codes is provided.
 
     Args:
         conn: Database connection
         products: List of product dictionaries
+        existing_codes: Set of codes already in DB (to skip)
 
     Returns:
         Number of products upserted
     """
     if not products:
         return 0
+
+    # Filter out existing products if codes provided
+    if existing_codes:
+        products = [p for p in products if p["code"] not in existing_codes]
+        if not products:
+            return 0
 
     try:
         # Prepare data for batch insert (sanitize text fields to remove null bytes)

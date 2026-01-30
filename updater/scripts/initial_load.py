@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from utils.download import download_file
 from utils.parser import parse_jsonl_file
-from utils.db import create_connection, upsert_products_batch
+from utils.db import create_connection, upsert_products_batch, get_all_product_codes
 
 logging.basicConfig(
     level=logging.INFO,
@@ -59,10 +59,16 @@ async def main():
         logger.info("Connecting to PostgreSQL...")
         pg_conn = await create_connection(DATABASE_URL)
 
+        # Load existing product codes to skip them
+        logger.info("Loading existing product codes from database...")
+        existing_codes = await get_all_product_codes(pg_conn)
+        logger.info(f"Found {len(existing_codes):,} existing products to skip")
+
         logger.info(f"Processing products in batches of {BATCH_SIZE:,}...")
         logger.info("This will take 1-2 hours. Progress logged every 100k products.")
 
         total_processed = 0
+        total_inserted = 0
         batch = []
 
         # Stream parse JSONL file (memory efficient)
@@ -71,21 +77,23 @@ async def main():
 
             # Upsert when batch is full
             if len(batch) >= BATCH_SIZE:
-                await upsert_products_batch(pg_conn, batch)
+                inserted = await upsert_products_batch(pg_conn, batch, existing_codes)
                 total_processed += len(batch)
+                total_inserted += inserted
                 # Progress logged by parser every 100k
                 batch = []
 
         # Insert remaining products
         if batch:
-            await upsert_products_batch(pg_conn, batch)
+            inserted = await upsert_products_batch(pg_conn, batch, existing_codes)
             total_processed += len(batch)
-            logger.info(f"Final batch processed. Total: {total_processed:,}")
+            total_inserted += inserted
+            logger.info(f"Final batch processed. Total: {total_processed:,}, Inserted: {total_inserted:,}")
 
         # Close connection
         await pg_conn.close()
 
-        logger.info(f"Bootstrap complete! Loaded {total_processed:,} products")
+        logger.info(f"Bootstrap complete! Processed {total_processed:,}, inserted {total_inserted:,} new products")
 
         # Keep JSONL file for future use (testing/debugging)
         logger.info(f"JSONL file kept at {jsonl_file} for future use")
