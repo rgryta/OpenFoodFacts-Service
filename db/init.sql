@@ -7,7 +7,7 @@ DROP TABLE IF EXISTS products CASCADE;
 -- Main products table
 CREATE TABLE products (
     -- Primary identifier (barcode or internal code)
-    code VARCHAR(50) PRIMARY KEY,
+    code VARCHAR(100) PRIMARY KEY,
 
     -- Frequently queried fields (denormalized for performance)
     product_name TEXT,
