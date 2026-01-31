@@ -17,14 +17,15 @@ CREATE TABLE products (
     countries_tags TEXT[],  -- Array of country tags for localization
 
     -- Nutritional data per 100g (extracted for fast access)
-    energy_100g NUMERIC(10, 2),
-    energy_kcal_100g NUMERIC(10, 2),
-    proteins_100g NUMERIC(10, 2),
-    carbohydrates_100g NUMERIC(10, 2),
-    fat_100g NUMERIC(10, 2),
-    sugars_100g NUMERIC(10, 2),
-    fiber_100g NUMERIC(10, 2),
-    sodium_100g NUMERIC(10, 2),
+    -- Using NUMERIC(15,4) to handle outlier values in OpenFoodFacts data
+    energy_100g NUMERIC(15, 4),
+    energy_kcal_100g NUMERIC(15, 4),
+    proteins_100g NUMERIC(15, 4),
+    carbohydrates_100g NUMERIC(15, 4),
+    fat_100g NUMERIC(15, 4),
+    sugars_100g NUMERIC(15, 4),
+    fiber_100g NUMERIC(15, 4),
+    sodium_100g NUMERIC(15, 4),
 
     -- Product images
     image_url TEXT,
