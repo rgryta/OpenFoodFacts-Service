@@ -4,10 +4,29 @@ Utility functions for parsing OpenFoodFacts data
 import json
 import logging
 import gzip
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
+
+# Max value for NUMERIC(15,4): 11 digits before decimal
+MAX_NUMERIC_VALUE = Decimal("99999999999.9999")
+
+
+def _safe_numeric(value: Any) -> Optional[Decimal]:
+    """Convert to Decimal rounded to 4 places, clamped to NUMERIC(15,4) limits."""
+    if value is None:
+        return None
+    try:
+        d = Decimal(str(value)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+        if d > MAX_NUMERIC_VALUE:
+            return MAX_NUMERIC_VALUE
+        if d < -MAX_NUMERIC_VALUE:
+            return -MAX_NUMERIC_VALUE
+        return d
+    except (InvalidOperation, ValueError, TypeError):
+        return None
 
 
 def extract_product_fields(product_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -64,14 +83,14 @@ def extract_product_fields(product_data: Dict[str, Any]) -> Dict[str, Any]:
         "brands": product_data.get("brands"),
         "quantity": product_data.get("quantity"),
         "countries_tags": product_data.get("countries_tags", []),
-        "energy_100g": nutriments.get("energy_100g"),
-        "energy_kcal_100g": nutriments.get("energy-kcal_100g"),
-        "proteins_100g": nutriments.get("proteins_100g"),
-        "carbohydrates_100g": nutriments.get("carbohydrates_100g"),
-        "fat_100g": nutriments.get("fat_100g"),
-        "sugars_100g": nutriments.get("sugars_100g"),
-        "fiber_100g": nutriments.get("fiber_100g"),
-        "sodium_100g": nutriments.get("sodium_100g"),
+        "energy_100g": _safe_numeric(nutriments.get("energy_100g")),
+        "energy_kcal_100g": _safe_numeric(nutriments.get("energy-kcal_100g")),
+        "proteins_100g": _safe_numeric(nutriments.get("proteins_100g")),
+        "carbohydrates_100g": _safe_numeric(nutriments.get("carbohydrates_100g")),
+        "fat_100g": _safe_numeric(nutriments.get("fat_100g")),
+        "sugars_100g": _safe_numeric(nutriments.get("sugars_100g")),
+        "fiber_100g": _safe_numeric(nutriments.get("fiber_100g")),
+        "sodium_100g": _safe_numeric(nutriments.get("sodium_100g")),
         "image_url": image_url,
         "image_small_url": image_small_url,
         "data": product_data  # Store full JSON including ALL language variants
