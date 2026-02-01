@@ -77,6 +77,7 @@ async def upsert_products_batch(
                 _sanitize_text(p.get("product_name_en")),
                 _sanitize_text(p.get("brands")),
                 _sanitize_text(p.get("quantity")),
+                p.get("countries_tags", []),
                 p.get("energy_100g"),
                 p.get("energy_kcal_100g"),
                 p.get("proteins_100g"),
@@ -96,16 +97,17 @@ async def upsert_products_batch(
         result = await conn.executemany(
             """
             INSERT INTO products (
-                code, product_name, product_name_en, brands, quantity,
+                code, product_name, product_name_en, brands, quantity, countries_tags,
                 energy_100g, energy_kcal_100g, proteins_100g,
                 carbohydrates_100g, fat_100g, sugars_100g,
                 fiber_100g, sodium_100g, image_url, image_small_url, data
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16::jsonb)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17::jsonb)
             ON CONFLICT (code) DO UPDATE SET
                 product_name = EXCLUDED.product_name,
                 product_name_en = EXCLUDED.product_name_en,
                 brands = EXCLUDED.brands,
                 quantity = EXCLUDED.quantity,
+                countries_tags = EXCLUDED.countries_tags,
                 energy_100g = EXCLUDED.energy_100g,
                 energy_kcal_100g = EXCLUDED.energy_kcal_100g,
                 proteins_100g = EXCLUDED.proteins_100g,
