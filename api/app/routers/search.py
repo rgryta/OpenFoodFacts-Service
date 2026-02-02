@@ -103,6 +103,9 @@ async def search_by_name(
     try:
         pool = await get_pool()
         async with pool.acquire() as conn:
+            # Set higher similarity threshold for fewer false positives (faster)
+            await conn.execute("SET pg_trgm.similarity_threshold = 0.4")
+
             # Build dynamic query based on language preference
             if lang and lang.lower() in INDEXED_LANGUAGES:
                 # Use JSONB with indexed language for fast search

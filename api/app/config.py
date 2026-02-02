@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
     # Service metadata
     service_name: str = "OpenFoodFacts API"
-    version: str = "1.0.0"
+    version: str = "1.0.6"
 
     @property
     def api_keys_list(self) -> List[str]:

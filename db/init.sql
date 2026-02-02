@@ -81,5 +81,14 @@ BEFORE UPDATE ON products
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 
+-- Autovacuum tuning for large table (4M+ rows)
+-- Lower scale factors = more frequent vacuum/analyze for better statistics
+ALTER TABLE products SET (
+    autovacuum_vacuum_scale_factor = 0.05,    -- Vacuum at 5% dead tuples (default: 20%)
+    autovacuum_analyze_scale_factor = 0.02,   -- Analyze at 2% changes (default: 10%)
+    autovacuum_vacuum_cost_delay = 10,        -- Faster vacuum
+    autovacuum_vacuum_cost_limit = 2000       -- Higher throughput
+);
+
 -- Grant permissions (if needed for specific user)
 -- GRANT SELECT, INSERT, UPDATE, DELETE ON products TO offuser;
