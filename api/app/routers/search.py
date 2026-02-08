@@ -33,7 +33,8 @@ async def search_by_barcode(code: str, api_key: str = Security(api_key_header)):
                        energy_100g, energy_kcal_100g, proteins_100g,
                        carbohydrates_100g, fat_100g, sugars_100g,
                        fiber_100g, sodium_100g,
-                       image_url, image_small_url
+                       image_url, image_small_url,
+                       categories_tags
                 FROM products
                 WHERE code = $1
                 """,
@@ -51,6 +52,7 @@ async def search_by_barcode(code: str, api_key: str = Security(api_key_header)):
                 product_name=row["product_name"],
                 brands=row["brands"],
                 quantity=row["quantity"],
+                categories_tags=row["categories_tags"],
                 nutrients=NutrientsModel(
                     energy_100g=row["energy_100g"],
                     energy_kcal_100g=row["energy_kcal_100g"],

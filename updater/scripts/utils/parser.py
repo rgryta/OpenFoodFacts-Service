@@ -83,6 +83,7 @@ def extract_product_fields(product_data: Dict[str, Any]) -> Dict[str, Any]:
         "brands": product_data.get("brands"),
         "quantity": product_data.get("quantity"),
         "countries_tags": product_data.get("countries_tags", []),
+        "categories_tags": product_data.get("categories_tags", []),
         "energy_100g": _safe_numeric(nutriments.get("energy_100g")),
         "energy_kcal_100g": _safe_numeric(nutriments.get("energy-kcal_100g")),
         "proteins_100g": _safe_numeric(nutriments.get("proteins_100g")),

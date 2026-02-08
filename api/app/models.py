@@ -29,6 +29,7 @@ class ProductResponse(BaseModel):
     product_name: Optional[str] = None
     brands: Optional[str] = None
     quantity: Optional[str] = None
+    categories_tags: Optional[List[str]] = None
     nutrients: Optional[NutrientsModel] = None
     images: Optional[ProductImagesModel] = None
 

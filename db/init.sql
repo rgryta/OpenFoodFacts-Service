@@ -15,6 +15,7 @@ CREATE TABLE products (
     brands TEXT,
     quantity TEXT,
     countries_tags TEXT[],  -- Array of country tags for localization
+    categories_tags TEXT[],  -- Array of category tags for product classification
 
     -- Nutritional data per 100g (extracted for fast access)
     -- Using NUMERIC(15,4) to handle outlier values in OpenFoodFacts data
@@ -48,6 +49,9 @@ CREATE INDEX idx_brands_trgm ON products USING GIN (brands gin_trgm_ops);
 
 -- GIN index for country tags array (for country-based filtering)
 CREATE INDEX idx_countries_tags ON products USING GIN (countries_tags);
+
+-- GIN index for category tags array (for product type classification)
+CREATE INDEX idx_categories_tags ON products USING GIN (categories_tags);
 
 -- GIN index for JSONB queries (enables exact lookups)
 CREATE INDEX idx_data_gin ON products USING GIN (data jsonb_path_ops);
