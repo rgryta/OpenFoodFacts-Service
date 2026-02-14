@@ -19,9 +19,12 @@ async def verify_api_key(api_key: str = None) -> bool:
     # Get allowed API keys
     allowed_keys: List[str] = settings.api_keys_list
 
-    # If no keys configured, allow all (development mode warning)
+    # Fail closed: no keys configured means service is misconfigured
     if not allowed_keys:
-        return True
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Service misconfigured: no API keys set",
+        )
 
     # Check if provided key is valid
     if not api_key or api_key not in allowed_keys:
