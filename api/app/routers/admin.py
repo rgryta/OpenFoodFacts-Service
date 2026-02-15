@@ -27,12 +27,9 @@ async def trigger_manual_sync(api_key: str = Security(api_key_header)):
 
     logger.info("Manual sync trigger requested")
 
-    # TODO: Implement actual sync trigger mechanism
-    # Options:
-    # 1. Shared volume with trigger file
-    # 2. Redis pub/sub
-    # 3. Database flag that updater polls
-    # 4. HTTP endpoint on updater container
+    # Sync is handled by the updater container on a cron schedule (see updater/crontab).
+    # This endpoint acknowledges the request. Manual IPC is not implemented because the
+    # updater runs as a separate container with its own cron lifecycle.
 
     return SyncTriggerResponse(
         status="accepted",
