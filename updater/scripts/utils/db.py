@@ -105,22 +105,30 @@ async def upsert_products_batch(
                 fiber_100g, sodium_100g, image_url, image_small_url, data
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18::jsonb)
             ON CONFLICT (code) DO UPDATE SET
-                product_name = EXCLUDED.product_name,
-                product_name_en = EXCLUDED.product_name_en,
-                brands = EXCLUDED.brands,
-                quantity = EXCLUDED.quantity,
-                countries_tags = EXCLUDED.countries_tags,
-                categories_tags = EXCLUDED.categories_tags,
-                energy_100g = EXCLUDED.energy_100g,
-                energy_kcal_100g = EXCLUDED.energy_kcal_100g,
-                proteins_100g = EXCLUDED.proteins_100g,
-                carbohydrates_100g = EXCLUDED.carbohydrates_100g,
-                fat_100g = EXCLUDED.fat_100g,
-                sugars_100g = EXCLUDED.sugars_100g,
-                fiber_100g = EXCLUDED.fiber_100g,
-                sodium_100g = EXCLUDED.sodium_100g,
-                image_url = EXCLUDED.image_url,
-                image_small_url = EXCLUDED.image_small_url,
+                product_name = COALESCE(EXCLUDED.product_name, products.product_name),
+                product_name_en = COALESCE(EXCLUDED.product_name_en, products.product_name_en),
+                brands = COALESCE(EXCLUDED.brands, products.brands),
+                quantity = COALESCE(EXCLUDED.quantity, products.quantity),
+                countries_tags = CASE
+                    WHEN EXCLUDED.countries_tags IS NOT NULL AND array_length(EXCLUDED.countries_tags, 1) > 0
+                    THEN EXCLUDED.countries_tags
+                    ELSE products.countries_tags
+                END,
+                categories_tags = CASE
+                    WHEN EXCLUDED.categories_tags IS NOT NULL AND array_length(EXCLUDED.categories_tags, 1) > 0
+                    THEN EXCLUDED.categories_tags
+                    ELSE products.categories_tags
+                END,
+                energy_100g = COALESCE(EXCLUDED.energy_100g, products.energy_100g),
+                energy_kcal_100g = COALESCE(EXCLUDED.energy_kcal_100g, products.energy_kcal_100g),
+                proteins_100g = COALESCE(EXCLUDED.proteins_100g, products.proteins_100g),
+                carbohydrates_100g = COALESCE(EXCLUDED.carbohydrates_100g, products.carbohydrates_100g),
+                fat_100g = COALESCE(EXCLUDED.fat_100g, products.fat_100g),
+                sugars_100g = COALESCE(EXCLUDED.sugars_100g, products.sugars_100g),
+                fiber_100g = COALESCE(EXCLUDED.fiber_100g, products.fiber_100g),
+                sodium_100g = COALESCE(EXCLUDED.sodium_100g, products.sodium_100g),
+                image_url = COALESCE(EXCLUDED.image_url, products.image_url),
+                image_small_url = COALESCE(EXCLUDED.image_small_url, products.image_small_url),
                 data = EXCLUDED.data,
                 updated_at = NOW()
             """,
