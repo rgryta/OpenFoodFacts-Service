@@ -1,0 +1,97 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      updater: ${{ steps.filter.outputs.updater }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'api/**'
+            updater:
+              - 'updater/**'
+
+  validate-api:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: api/requirements.txt
+
+      - name: Install dependencies
+        working-directory: api
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff
+
+      - name: Lint with ruff
+        working-directory: api
+        run: ruff check app/
+
+      - name: Smoke import (validates dependency compatibility)
+        working-directory: api
+        run: python -c "from app.main import app; assert app.title == 'OpenFoodFacts API'; print('import OK')"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Docker build (no push)
+        uses: docker/build-push-action@v6.18.0
+        with:
+          context: ./api
+          push: false
+          platforms: linux/amd64
+
+  validate-updater:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.updater == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: updater/requirements.txt
+
+      - name: Install dependencies
+        working-directory: updater
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff
+
+      - name: Lint with ruff
+        working-directory: updater
+        run: ruff check scripts/
+
+      - name: Smoke import (validates dependency compatibility)
+        working-directory: updater
+        run: |
+          python -c "import scripts.delta_update; import scripts.initial_load; import scripts.weekly_cleanup; print('import OK')"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Docker build (no push)
+        uses: docker/build-push-action@v6.18.0
+        with:
+          context: ./updater
+          push: false
+          platforms: linux/amd64
