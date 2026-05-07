@@ -8,7 +8,6 @@ import sys
 import logging
 import asyncio
 from pathlib import Path
-from datetime import datetime, timedelta
 import httpx
 
 # Add utils to path

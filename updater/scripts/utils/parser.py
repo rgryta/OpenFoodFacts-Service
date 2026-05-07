@@ -58,7 +58,6 @@ def extract_product_fields(product_data: Dict[str, Any]) -> Dict[str, Any]:
     nutriments = product_data.get("nutriments", {})
 
     # Extract image URLs
-    images = product_data.get("images", {})
     selected_images = product_data.get("selected_images", {})
 
     # Get best available product image URL

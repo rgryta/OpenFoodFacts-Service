@@ -2,13 +2,11 @@
 Product search endpoints
 """
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Security
-from typing import List
-import asyncpg
+from fastapi import APIRouter, HTTPException, status, Query, Security
 
 from ..models import ProductResponse, SearchResponse, ProductSearchResult, NutrientsModel, ProductImagesModel
 from ..database import get_pool
-from ..middleware.auth import api_key_dependency, api_key_header, verify_api_key
+from ..middleware.auth import api_key_header, verify_api_key
 
 logger = logging.getLogger(__name__)
 

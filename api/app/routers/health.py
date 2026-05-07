@@ -2,8 +2,7 @@
 Health check endpoint
 """
 import logging
-from fastapi import APIRouter, Depends
-import asyncpg
+from fastapi import APIRouter
 
 from ..models import HealthResponse
 from ..database import get_pool
@@ -37,7 +36,7 @@ async def health_check():
                 product_count=count,
                 last_update=str(last_update) if last_update else None
             )
-    except Exception as e:
+    except Exception:
         logger.exception("Health check failed")
         return HealthResponse(
             status="unhealthy",

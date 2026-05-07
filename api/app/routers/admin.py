@@ -2,10 +2,10 @@
 Admin endpoints for service management
 """
 import logging
-from fastapi import APIRouter, Depends, Security
+from fastapi import APIRouter, Security
 
 from ..models import SyncTriggerResponse
-from ..middleware.auth import api_key_dependency, api_key_header, verify_api_key
+from ..middleware.auth import api_key_header, verify_api_key
 
 logger = logging.getLogger(__name__)
 

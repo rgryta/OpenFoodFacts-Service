@@ -95,7 +95,7 @@ async def upsert_products_batch(
         ]
 
         # Execute batch upsert
-        result = await conn.executemany(
+        await conn.executemany(
             """
             INSERT INTO products (
                 code, product_name, product_name_en, brands, quantity, countries_tags,
